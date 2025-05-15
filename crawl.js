@@ -2,9 +2,10 @@
 const puppeteer = require('puppeteer');
 const { google } = require('googleapis');
 const auth = new google.auth.GoogleAuth({
-  keyFile: 'credentials.json',
+  credentials: JSON.parse(process.env.GCP_CREDENTIALS_JSON),
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
+
 
 const SPREADSHEET_ID = '1b1Ix6nv-dfM7beM4fI5vDww8jPe9IoLqVob6H3DVXic';
 const SHEET_NAME = '합계수집';
