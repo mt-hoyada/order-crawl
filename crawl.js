@@ -84,13 +84,14 @@ async function saveToSheet(count) {
   console.log(`✅ 저장 완료: ${now} - 현재: ${count}건, 누적: ${total}건`);
 }
 
-// ✅ 5. 실행
-(async () => {
+// ✅ 외부에서 호출할 수 있게 export
+async function run() {
   const count = await fetchTotalCount();
   if (count === null) {
-    console.error('❗ 합계 건수를 추출하지 못했습니다.');
-    return;
+    throw new Error('❗ 합계 건수를 추출하지 못했습니다.');
   }
   console.log('📦 합계:', count);
   await saveToSheet(count);
-})();
+}
+
+module.exports = run;
