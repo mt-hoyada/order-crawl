@@ -1,0 +1,32 @@
+name: 24시콜 합계 자동 수집
+
+on:
+  schedule:
+    # 매일 KST 오전 7시부터 오후 3시까지 10분마다 실행 (UTC 기준 22시~06시)
+    - cron: '*/10 22-6 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-crawl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v3
+
+      - name: Node.js 설치
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Puppeteer 의존성 설치
+        run: npm install
+
+      - name: credentials.json 파일 생성
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS_JSON }}
+        run: |
+          echo "$GOOGLE_APPLICATION_CREDENTIALS" > credentials.json
+
+      - name: 크롤링 스크립트 실행
+        run: node crawl.js
