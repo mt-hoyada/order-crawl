@@ -2,7 +2,7 @@
 const puppeteer = require('puppeteer');
 const { google } = require('googleapis');
 
-// 🔐 GitHub Secrets에서 전달된 GCP 서비스 계정 인증 정보 사용
+// 🔐 GitHub Actions에서 환경변수로 전달된 인증 JSON 사용
 const auth = new google.auth.GoogleAuth({
   credentials: JSON.parse(process.env.GCP_CREDENTIALS_JSON),
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -15,20 +15,20 @@ const SHEET_NAME = '합계수집';
 async function fetchTotalCount() {
   const browser = await puppeteer.launch({
     headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--no-first-run',
-      '--no-zygote',
-    ],
+    args: ['--no-sandbox', '--disable-setuid-sandbox'], // GitHub Actions 필수 옵션
   });
 
   const page = await browser.newPage();
+
+  // ⛑️ User-Agent 설정: 일부 사이트에서 bot 차단 우회
+  await page.setUserAgent(
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+  );
+
+  // ⏳ 대기 조건 완화 (networkidle2 → domcontentloaded)
   await page.goto('https://www.15887924.com/main.do', {
-    waitUntil: 'networkidle2',
-    timeout: 120000, // ⏰ 2분으로 타임아웃 연장
+    waitUntil: 'domcontentloaded',
+    timeout: 60000,
   });
 
   const text = await page.evaluate(() => document.body.innerText);
@@ -83,7 +83,6 @@ async function saveToSheet(count) {
   }).replace(' ', 'T');
 
   await ensureHeaderExists(authClient);
-
   const lastRow = await getLastRow(authClient);
   const prevCount = lastRow ? parseInt(lastRow[1]) : 0;
   const prevTotal = lastRow ? parseInt(lastRow[2]) : 0;
