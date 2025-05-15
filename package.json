@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node crawl.js"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
