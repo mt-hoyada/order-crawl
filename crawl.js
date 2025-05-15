@@ -1,8 +1,10 @@
-// 📦 Puppeteer 기반 24시콜화물 '합계' 건수 추출 + 누적 저장 (헤더 포함)
+// 📦 Puppeteer 기반 24시콜화물 '합계' 건수 추출 + 누적 저장
 const puppeteer = require('puppeteer');
 const { google } = require('googleapis');
+
+// 🔐 구글 인증: 환경변수에서 직접 JSON 파싱
 const auth = new google.auth.GoogleAuth({
-  keyFile: 'credentials.json',
+  credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
@@ -11,9 +13,15 @@ const SHEET_NAME = '합계수집';
 
 // ✅ 1. '합계 : xxxx건' 텍스트 추출
 async function fetchTotalCount() {
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'], // Railway 환경에서 필수!
+  });
   const page = await browser.newPage();
-  await page.goto('https://www.15887924.com/main.do', { waitUntil: 'networkidle2', timeout: 60000 });
+  await page.goto('https://www.15887924.com/main.do', {
+    waitUntil: 'networkidle2',
+    timeout: 60000,
+  });
 
   const text = await page.evaluate(() => document.body.innerText);
   await browser.close();
@@ -62,7 +70,9 @@ async function ensureHeaderExists(authClient) {
 async function saveToSheet(count) {
   const authClient = await auth.getClient();
   const sheets = google.sheets({ version: 'v4', auth: authClient });
-  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).replace(' ', 'T');
+  const now = new Date().toLocaleString('sv-SE', {
+    timeZone: 'Asia/Seoul',
+  }).replace(' ', 'T');
 
   await ensureHeaderExists(authClient);
 
@@ -86,11 +96,15 @@ async function saveToSheet(count) {
 
 // ✅ 5. 실행
 (async () => {
-  const count = await fetchTotalCount();
-  if (count === null) {
-    console.error('❗ 합계 건수를 추출하지 못했습니다.');
-    return;
+  try {
+    const count = await fetchTotalCount();
+    if (count === null) {
+      console.error('❗ 합계 건수를 추출하지 못했습니다.');
+      return;
+    }
+    console.log('📦 합계:', count);
+    await saveToSheet(count);
+  } catch (err) {
+    console.error('❌ 오류 발생:', err.message);
   }
-  console.log('📦 합계:', count);
-  await saveToSheet(count);
 })();
