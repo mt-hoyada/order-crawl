@@ -2,8 +2,8 @@ name: Run order-crawl every 10min
 
 on:
   schedule:
-    - cron: "*/10 * * * *"  # 매 10분마다 실행
-  workflow_dispatch:        # 수동 실행도 가능
+    - cron: "*/10 7-15 * * *"  # ⏰ 오전 7시부터 오후 3시까지 10분 간격
+  workflow_dispatch:           # 🖱 수동 실행도 가능
 
 jobs:
   run-crawler:
