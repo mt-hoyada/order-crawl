@@ -1,7 +1,7 @@
 {
-  "name": "order-crawl",
+  "name": "24web",
   "version": "1.0.0",
-  "description": "24시콜화물 합계 자동 크롤링",
+  "description": "24시콜화물 합계 크롤러",
   "main": "crawl.js",
   "scripts": {
     "start": "node crawl.js"
@@ -10,6 +10,6 @@
   "license": "ISC",
   "dependencies": {
     "googleapis": "^148.0.0",
-    "puppeteer": "^21.3.8"
+    "puppeteer": "^24.8.2"
   }
 }
