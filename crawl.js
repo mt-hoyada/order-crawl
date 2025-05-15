@@ -1,10 +1,8 @@
 // 📦 Puppeteer 기반 24시콜화물 '합계' 건수 추출 + 누적 저장 (헤더 포함)
 const puppeteer = require('puppeteer');
 const { google } = require('googleapis');
-
-// 🔐 GitHub Actions에서 환경변수로 전달된 인증 JSON 사용
 const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GCP_CREDENTIALS_JSON),
+  credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
@@ -13,23 +11,9 @@ const SHEET_NAME = '합계수집';
 
 // ✅ 1. '합계 : xxxx건' 텍스트 추출
 async function fetchTotalCount() {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'], // GitHub Actions 필수 옵션
-  });
-
+  const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
-
-  // ⛑️ User-Agent 설정: 일부 사이트에서 bot 차단 우회
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-  );
-
-  // ⏳ 대기 조건 완화 (networkidle2 → domcontentloaded)
-  await page.goto('https://www.15887924.com/main.do', {
-    waitUntil: 'domcontentloaded',
-    timeout: 60000,
-  });
+  await page.goto('https://www.15887924.com/main.do', { waitUntil: 'networkidle2', timeout: 60000 });
 
   const text = await page.evaluate(() => document.body.innerText);
   await browser.close();
@@ -78,11 +62,10 @@ async function ensureHeaderExists(authClient) {
 async function saveToSheet(count) {
   const authClient = await auth.getClient();
   const sheets = google.sheets({ version: 'v4', auth: authClient });
-  const now = new Date().toLocaleString('sv-SE', {
-    timeZone: 'Asia/Seoul',
-  }).replace(' ', 'T');
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).replace(' ', 'T');
 
   await ensureHeaderExists(authClient);
+
   const lastRow = await getLastRow(authClient);
   const prevCount = lastRow ? parseInt(lastRow[1]) : 0;
   const prevTotal = lastRow ? parseInt(lastRow[2]) : 0;
@@ -101,11 +84,12 @@ async function saveToSheet(count) {
   console.log(`✅ 저장 완료: ${now} - 현재: ${count}건, 누적: ${total}건`);
 }
 
-// ✅ 실행
+// ✅ 5. 실행
 (async () => {
   const count = await fetchTotalCount();
   if (count === null) {
-    throw new Error('❗ 합계 건수를 추출하지 못했습니다.');
+    console.error('❗ 합계 건수를 추출하지 못했습니다.');
+    return;
   }
   console.log('📦 합계:', count);
   await saveToSheet(count);

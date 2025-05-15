@@ -1,14 +1,13 @@
 {
   "name": "24web",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "24시콜화물 합계 크롤러",
+  "main": "crawl.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node crawl.js"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "googleapis": "^148.0.0",
     "puppeteer": "^24.8.2"
