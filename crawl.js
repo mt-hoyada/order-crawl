@@ -1,9 +1,8 @@
 // 📦 Puppeteer 기반 24시콜화물 '합계' 건수 추출 + 누적 저장 (헤더 포함)
 const puppeteer = require('puppeteer');
 const { google } = require('googleapis');
-
 const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
+  keyFile: 'credentials.json',
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
@@ -12,10 +11,7 @@ const SHEET_NAME = '합계수집';
 
 // ✅ 1. '합계 : xxxx건' 텍스트 추출
 async function fetchTotalCount() {
-  const browser = await puppeteer.launch({
-    headless: 'new', // 최신 puppeteer 권장값
-    args: ['--no-sandbox', '--disable-setuid-sandbox'], // Railway 필수
-  });
+  const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
   await page.goto('https://www.15887924.com/main.do', { waitUntil: 'networkidle2', timeout: 60000 });
 
