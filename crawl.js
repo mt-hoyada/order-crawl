@@ -2,7 +2,6 @@
 const puppeteer = require('puppeteer');
 const { google } = require('googleapis');
 
-// 🔐 GitHub Secrets로부터 서비스 계정 인증 정보 객체 파싱
 const auth = new google.auth.GoogleAuth({
   credentials: JSON.parse(process.env.GCP_CREDENTIALS_JSON),
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -15,9 +14,8 @@ const SHEET_NAME = '합계수집';
 async function fetchTotalCount() {
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'], // ✅ GitHub Actions 필수 옵션
+    args: ['--no-sandbox', '--disable-setuid-sandbox'], // 중요!
   });
-
   const page = await browser.newPage();
   await page.goto('https://www.15887924.com/main.do', {
     waitUntil: 'networkidle2',
@@ -28,10 +26,13 @@ async function fetchTotalCount() {
   await browser.close();
 
   const match = text.match(/합계\s*[:：]\s*([\d,]+)건/);
-  return match ? parseInt(match[1].replace(/,/g, '')) : null;
+  if (match) {
+    return parseInt(match[1].replace(/,/g, ''));
+  }
+  return null;
 }
 
-// ✅ 2. 시트에서 마지막 행 가져오기
+// ✅ 2. 시트에서 마지막 데이터 행 불러오기
 async function getLastRow(authClient) {
   const sheets = google.sheets({ version: 'v4', auth: authClient });
   const res = await sheets.spreadsheets.values.get({
@@ -42,7 +43,7 @@ async function getLastRow(authClient) {
   return rows && rows.length > 1 ? rows[rows.length - 1] : null;
 }
 
-// ✅ 3. 첫 실행 시 헤더 삽입
+// ✅ 3. 첫 실행 시 헤더 추가
 async function ensureHeaderExists(authClient) {
   const sheets = google.sheets({ version: 'v4', auth: authClient });
   const res = await sheets.spreadsheets.values.get({
@@ -92,14 +93,12 @@ async function saveToSheet(count) {
   console.log(`✅ 저장 완료: ${now} - 현재: ${count}건, 누적: ${total}건`);
 }
 
-// ✅ 외부에서 호출 가능하게 export
-async function run() {
+// ✅ 실행
+(async () => {
   const count = await fetchTotalCount();
   if (count === null) {
     throw new Error('❗ 합계 건수를 추출하지 못했습니다.');
   }
   console.log('📦 합계:', count);
   await saveToSheet(count);
-}
-
-module.exports = run;
+})();
