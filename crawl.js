@@ -2,6 +2,7 @@
 const puppeteer = require('puppeteer');
 const { google } = require('googleapis');
 
+// 🔐 GitHub Secrets에서 전달된 GCP 서비스 계정 인증 정보 사용
 const auth = new google.auth.GoogleAuth({
   credentials: JSON.parse(process.env.GCP_CREDENTIALS_JSON),
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -14,12 +15,20 @@ const SHEET_NAME = '합계수집';
 async function fetchTotalCount() {
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'], // 중요!
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--no-first-run',
+      '--no-zygote',
+    ],
   });
+
   const page = await browser.newPage();
   await page.goto('https://www.15887924.com/main.do', {
     waitUntil: 'networkidle2',
-    timeout: 60000,
+    timeout: 120000, // ⏰ 2분으로 타임아웃 연장
   });
 
   const text = await page.evaluate(() => document.body.innerText);
