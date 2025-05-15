@@ -1,8 +1,7 @@
-// 📦 Puppeteer 기반 24시콜화물 '합계' 건수 추출 + 누적 저장
 const puppeteer = require('puppeteer');
 const { google } = require('googleapis');
 
-// 🔐 구글 인증: 환경변수에서 직접 JSON 파싱
+// 🔐 Google 인증 - 환경변수 기반
 const auth = new google.auth.GoogleAuth({
   credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
@@ -15,25 +14,36 @@ const SHEET_NAME = '합계수집';
 async function fetchTotalCount() {
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'], // Railway 환경에서 필수!
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
+
   const page = await browser.newPage();
-  await page.goto('https://www.15887924.com/main.do', {
-    waitUntil: 'networkidle2',
-    timeout: 60000,
-  });
 
-  const text = await page.evaluate(() => document.body.innerText);
-  await browser.close();
+  // 👇 User-Agent 설정 (사이트 차단 회피 목적)
+  await page.setUserAgent(
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'
+  );
 
-  const match = text.match(/합계\s*[:：]\s*([\d,]+)건/);
-  if (match) {
-    return parseInt(match[1].replace(/,/g, ''));
+  try {
+    await page.goto('https://www.15887924.com/main.do', {
+      waitUntil: 'domcontentloaded',
+      timeout: 90000,
+    });
+
+    const text = await page.evaluate(() => document.body.innerText);
+    await browser.close();
+
+    const match = text.match(/합계\s*[:：]\s*([\d,]+)건/);
+    return match ? parseInt(match[1].replace(/,/g, '')) : null;
+
+  } catch (err) {
+    console.error('❌ 페이지 로딩 실패:', err.message);
+    await browser.close();
+    return null;
   }
-  return null;
 }
 
-// ✅ 2. 시트에서 마지막 데이터 행 불러오기
+// ✅ 2. 시트에서 마지막 데이터 행 가져오기
 async function getLastRow(authClient) {
   const sheets = google.sheets({ version: 'v4', auth: authClient });
   const res = await sheets.spreadsheets.values.get({
@@ -44,7 +54,7 @@ async function getLastRow(authClient) {
   return rows && rows.length > 1 ? rows[rows.length - 1] : null;
 }
 
-// ✅ 3. 첫 실행 시 헤더 추가
+// ✅ 3. 헤더 확인 및 생성
 async function ensureHeaderExists(authClient) {
   const sheets = google.sheets({ version: 'v4', auth: authClient });
   const res = await sheets.spreadsheets.values.get({
@@ -66,7 +76,7 @@ async function ensureHeaderExists(authClient) {
   }
 }
 
-// ✅ 4. 구글 시트에 저장
+// ✅ 4. 시트에 저장
 async function saveToSheet(count) {
   const authClient = await auth.getClient();
   const sheets = google.sheets({ version: 'v4', auth: authClient });
@@ -105,6 +115,6 @@ async function saveToSheet(count) {
     console.log('📦 합계:', count);
     await saveToSheet(count);
   } catch (err) {
-    console.error('❌ 오류 발생:', err.message);
+    console.error('❌ 전체 실행 오류:', err.message);
   }
 })();
